@@ -1,0 +1,205 @@
+// task 2 "Employee task Manager"
+
+-- step one 
+use EmployeeTaskManager
+// create employee collection 
+db.employee.insertMany([
+  {
+    Name: "Aya",
+    Age: 27,
+    Email: "Aya@gmail.com",
+    Salary: 12000,
+    Skills: ["Flutter", "Api", "MongoDB"],
+    Address: {
+      Country: "Turkey",
+      City: "Istanbul",
+      Street: "st50"
+    },
+    IsManager: true
+  },
+  {
+    Name: "Toqa",
+    Age: 25,
+    Email: "Toqa@gmail.com",
+    Salary: 10000,
+    Skills: ["React", "UI/UX", "MySQL"],
+    Address: {
+      Country: "UK",
+      City: "England",
+      Street: "st51"
+    },
+    IsManager: false
+  },
+  {
+    Name: "Esraa",
+    Age: 26,
+    Email: "Esraa@gmail.com",
+    Salary: 9500,
+    Skills: ["PowerBI", "MySQL"],
+    Address: {
+      Country: "Egypt",
+      City: "Cairo",
+      Street: "st52"
+    },
+    IsManager: false
+  }
+])
+
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+
+// Create Tasks Collection and one to many relationship using object id 
+
+// Step 1: Load all employees into a map
+const employees = db.employee.find().toArray();
+const employeeMap = {};
+employees.forEach(emp => {
+  employeeMap[emp.Name] = emp._id;
+});
+
+
+// Step 2: Insert tasks using the map
+db.task.insertMany([
+  {
+    title: "Develop Mobile App",
+    description: "Create a Flutter-based mobile application",
+    employeeId: employeeMap["Aya"],
+    tags: ["Flutter", "Mobile", "API"]
+  },
+  {
+    title: "Fix Login Bug",
+    description: "Resolve the login issue reported by QA",
+    employeeId: employeeMap["Aya"],
+    tags: ["Bug", "Auth"]
+  },
+  {
+    title: "Design Landing Page",
+    description: "Modern responsive UI using Figma",
+    employeeId: employeeMap["Toqa"],
+    tags: ["React", "UI", "UX"]
+  },
+  {
+    title: "Prepare Design System",
+    description: "Organize components for reuse across the platform",
+    employeeId: employeeMap["Toqa"],
+    tags: ["Figma", "Components", "Design"]
+  },
+  {
+    title: "Create Sales Dashboard",
+    description: "Analyze sales data and visualize in PowerBI",
+    employeeId: employeeMap["Esraa"],
+    tags: ["PowerBI", "Dashboard", "Sales"]
+  },
+  {
+    title: "Data Cleaning Script",
+    description: "Write a Python script to clean customer data",
+    employeeId: employeeMap["Esraa"],
+    tags: ["Python", "Data Cleaning", "ETL"]
+  }
+])
+
+-------------------------------------------------------------------------------------------------------------------------
+
+//9Find Related Data Using $lookup 
+
+db.employee.aggregate([
+  {
+    $lookup: {
+      from: "task",
+      localField: "_id",
+      foreignField: "employeeId",
+      as: "tasks"
+    }
+  }
+])
+
+-------------------------------------------------------------------------------------------------------------------------
+// 10.	Group Data with Aggregation 
+
+db.employee.aggregate([
+  {
+    $group: {
+      _id: null,
+      totalSalary: { $sum: "$Salary" },
+      averageAge: { $avg: "$Age" },
+      totalEmployees: { $sum: 1 }
+    }
+  },
+  {
+    $project: {
+      _id: 0
+    }
+  }
+])
+
+
+---------------------------------------------------------------------------------------------------------------------
+//11.	Match and Project 
+
+db.employee.aggregate([
+  {
+    $match: {
+      Salary: { $gt: 10000 } 
+    }
+  },
+  {
+    $project: {
+      _id:0,
+      Name: 1,  
+      Age: 1,  
+      Salary: 1 
+    }
+  }
+])
+
+
+------------------------------------
+// 11
+db.employee.aggregate([
+  {
+    $match: {
+      Salary: { $gt: 10000 }
+    }
+  },
+  {
+    $lookup: {
+      from: "task",
+      localField: "_id",             
+      foreignField: "employeeId",    
+      as: "tasks"
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      Name: 1,
+      Age: 1,
+      Salary: 1,
+      "tasks.title": 1,
+      "tasks.description": 1
+    }
+  }
+])
+
+
+---------------------------------------------------------------------------------------------------------------
+//12.	Aggregation: Sorting and Limiting 
+
+db.employee.aggregate([
+  {
+    $sort: { Salary: -1 } 
+  },
+  {
+    $limit: 1
+  },
+  {
+    $project: {
+      _id: 0, 
+      Name: 1,  
+      Salary: 1,  
+      Age: 1,
+      Skills: 1  
+    }
+  }
+])
